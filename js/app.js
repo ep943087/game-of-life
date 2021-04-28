@@ -3,7 +3,7 @@ import GameOfLife from './gameOfLife.js';
 const c = document.querySelector('#myCanvas');
 const ctx = c.getContext('2d');
 
-const game = new GameOfLife(300,300, c);
+const game = new GameOfLife(400,400, c);
 
 let myInterval;
 
@@ -24,5 +24,5 @@ window.onload = () => {
     draw();
     myInterval = setInterval(()=>{
         game.update();
-    }, 200);
+    }, 100);
 }

@@ -10,9 +10,8 @@ class Cell{
         return this.alive? "black" : "white";
     }
 
-    aliveNeighbors(grid){
-        let count = 0;
-
+    setNeighbors(grid){
+        this.neighbors = [];
         for(let i=-1;i<=1;i++){
             for(let j=-1;j<=1;j++){
                 if(i === 0 && j === 0)
@@ -20,26 +19,32 @@ class Cell{
                 let ci = this.i + i;
                 let cj = this.j + j;
 
-                // if(ci < 0 || cj < 0 || ci >= grid.length || cj >= grid[0].length)
-                //     continue;
+                if(ci < 0 || cj < 0 || ci >= grid.length || cj >= grid[0].length)
+                    continue;
                 
-                ci = ci < 0? grid.length - 1 : ci;
-                cj = cj < 0? grid[0].length - 1 : cj;
-                ci = ci >= grid.length? 0 : ci;
-                cj = cj >= grid[0].length? 0 : cj;
+                // ci = ci < 0? grid.length - 1 : ci;
+                // cj = cj < 0? grid[0].length - 1 : cj;
+                // ci = ci >= grid.length? 0 : ci;
+                // cj = cj >= grid[0].length? 0 : cj;
 
-
-                if(grid[ci][cj].alive){
-                    count++;
-                }
+                this.neighbors.push(grid[ci][cj]);
             }
+        }
+    }
+
+    aliveNeighbors(){
+        let count = 0;
+
+        for(let i=0;i<this.neighbors.length;i++){
+            if(this.neighbors[i].alive)
+                count++;
         }
 
         return count;
     }
 
-    getStatus(grid){
-        const aliveCount = this.aliveNeighbors(grid);
+    getStatus(){
+        const aliveCount = this.aliveNeighbors();
 
         if(this.alive){
             if(aliveCount < 2){
@@ -83,6 +88,12 @@ export default class GameOfLife{
             }
             this.grid.push(row);
         }
+
+        for(let i=0;i<this.rows;i++){
+            for(let j=0;j<this.cols;j++){
+                this.grid[i][j].setNeighbors(this.grid);
+            }
+        }
     }
 
     update(){
@@ -125,10 +136,13 @@ export default class GameOfLife{
     }
 
     drawGrid(){
-        const lineWidth = this.transforms.transformLineWidth(1);
+        const lineWidth = this.transforms.transformLineWidth(1.5);
         for(let i=0;i<this.rows+1;i++){
-            this.transforms.drawLine([{x: 0,y: i*this.height},{x: this.gridWidth, y: i*this.height}], this.gridColor, lineWidth);
-            this.transforms.drawLine([{x: i*this.width, y: 0},{x: i*this.width, y: this.gridHeight}], this.gridColor, lineWidth);
+
+            const width = i%10 === 0? 2 * lineWidth : lineWidth;
+
+            this.transforms.drawLine([{x: 0,y: i*this.height},{x: this.gridWidth, y: i*this.height}], this.gridColor, width);
+            this.transforms.drawLine([{x: i*this.width, y: 0},{x: i*this.width, y: this.gridHeight}], this.gridColor, width);
         }
     }
 }

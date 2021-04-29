@@ -10,8 +10,19 @@
 <body>
     <h1>Game of Life</h1>
     <div>
+        <div class='controls'>
+            Edit: <input id="edit-mode" type="checkbox" unchecked />
+            <div class='buttons'>
+                <button class='move-around'>Move Around</button>
+                <button class='life'>Life</button>
+                <button class='death'>Death</button>
+            </div>
+        </div>
         <div class='canvas-container'>
             <canvas id="myCanvas"></canvas>
+        </div>
+        <div>
+            <button class='clear-button'>Clear</button>
         </div>
     </div>
     <script src="js/app.js" type="module"></script>

@@ -8,3 +8,20 @@
   height: 100%;
   border: 1px solid black;
 }
+
+.buttons{
+  display: none;
+}
+
+.buttons.showing{
+  display: unset;
+}
+
+.buttons button{
+  opacity: .7;
+}
+
+.buttons button.active{
+  opacity: 1;
+  color: blue;
+}

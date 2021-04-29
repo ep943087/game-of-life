@@ -6,6 +6,7 @@ class Cell{
         this.j = j;
         this.alive = Math.random() < .1;
     }
+
     getColor(){
         return this.alive? "black" : "white";
     }
@@ -62,7 +63,6 @@ class Cell{
     }
 }
 
-
 export default class GameOfLife{
     constructor(rows, cols, c){
         this.rows = rows;
@@ -76,8 +76,104 @@ export default class GameOfLife{
         this.gridWidth = this.cols * this.width;
         this.gridHeight = this.rows * this.height;
         this.transforms.setCamera({x: this.gridWidth/2, y: this.gridHeight/2});
-        console.log(this.transforms.camera);
+        this.setControls();
+        this.currentCell = null;        
+        this.mouse(c);
+        this.clearNodesButton();
     }
+
+    getCurrentIJ = (e) =>{
+        const m = this.transforms.getMousePos(e);
+        const wm = this.transforms.screenToWorld(m);
+        if(wm.x < 0 || wm.y < 0 || wm.x >= this.gridWidth || wm.y >= this.gridHeight){
+            return (this.currentCell = null);
+        }
+        const i = Math.floor((wm.y / this.gridHeight) * this.rows);
+        const j = Math.floor((wm.x / this.gridWidth) * this.cols);
+        return {i,j};
+    }
+
+    clearNodesButton(){
+        document.querySelector('.clear-button').onclick = (e)=>{
+            for(let i=0;i<this.rows;i++){
+                for(let j=0;j<this.cols;j++){
+                    this.grid[i][j].alive = false;
+                }
+            }
+        }
+    }
+
+    setCurrentNode(e, alive){
+        const {i,j} = this.getCurrentIJ(e);
+        this.grid[i][j].alive = alive;
+    }
+
+    mouse(c){
+        c.addEventListener('mousedown',(e)=>{
+            this.mouseDown = true;
+            if(!this.editMode.checked || this.editType === "move-around") return;
+            switch(this.editType){
+                case "life":
+                    this.setCurrentNode(e,true);
+                    break;
+                case "death":
+                    this.setCurrentNode(e,false);
+                    break;
+            }
+        })
+        c.addEventListener('mousemove',(e)=>{
+            if(!this.mouseDown || !this.editMode.checked || this.editType === "move-around") return;
+            switch(this.editType){
+                case "life":
+                    this.setCurrentNode(e,true);
+                    break;
+                case "death":
+                    this.setCurrentNode(e,false);
+                    break;
+            }
+        });
+        c.addEventListener('mouseup',(e)=>{
+            this.mouseDown = false;
+        });
+    }
+
+    deactivateAllButtons(){
+        document.querySelector('.buttons').querySelectorAll('button').forEach(button=>{
+            button.classList.remove('active');
+        });
+        document.querySelector(`.${this.editType}`).classList.add('active');
+    }
+
+    editModeChanged = (e) =>{
+        document.querySelector('.buttons').classList.toggle('showing');
+        this.deactivateAllButtons();
+
+        if(!this.editMode.checked)
+            this.transforms.isStatic = false;
+        else if(this.editType !== "move-around")
+            this.transforms.isStatic = true;
+    }
+
+    buttonClicked = (e) => {
+        this.editType = e.target.classList[0];
+        this.deactivateAllButtons();
+        const isStatic = this.editType !== "move-around";
+        this.transforms.setIsStatic(isStatic);
+    }
+
+    buttonsClicked(){
+        document.querySelector('.buttons').querySelectorAll('button').forEach(button=>{
+            button.addEventListener('click',this.buttonClicked);
+        });
+    }
+
+    setControls(){
+        this.editType = "move-around";
+        this.editMode = document.querySelector('#edit-mode');
+        this.editMode.onchange = this.editModeChanged;
+        this.buttonsClicked();
+    }
+
 
     initGrid(){
         this.grid = [];
@@ -97,6 +193,9 @@ export default class GameOfLife{
     }
 
     update(){
+
+        if(this.editMode.checked) return;
+
         this.copy = [];
         for(let i=0;i<this.rows;i++){
             const row = [];

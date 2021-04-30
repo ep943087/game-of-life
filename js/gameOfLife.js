@@ -1,4 +1,5 @@
 import {getRectangle, Transformations} from './transformations.js';
+import {patterns} from './patterns.js';
 
 class Cell{
     constructor(i,j){
@@ -23,6 +24,7 @@ class Cell{
                 if(ci < 0 || cj < 0 || ci >= grid.length || cj >= grid[0].length)
                     continue;
                 
+                // This allows wrap-around grid neighbors
                 // ci = ci < 0? grid.length - 1 : ci;
                 // cj = cj < 0? grid[0].length - 1 : cj;
                 // ci = ci >= grid.length? 0 : ci;
@@ -80,6 +82,7 @@ export default class GameOfLife{
         this.currentCell = null;        
         this.mouse(c);
         this.clearNodesButton();
+        this.currentNode = null;
     }
 
     getCurrentIJ = (e) =>{
@@ -119,9 +122,15 @@ export default class GameOfLife{
                 case "death":
                     this.setCurrentNode(e,false);
                     break;
+                case "pattern":
+                    this.currentNode = this.getCurrentIJ(e);
+                    break;
             }
         })
         c.addEventListener('mousemove',(e)=>{
+            if(this.editMode.checked && this.editType === "pattern"){
+                this.currentNode = this.getCurrentIJ(e);
+            }
             if(!this.mouseDown || !this.editMode.checked || this.editType === "move-around") return;
             switch(this.editType){
                 case "life":
@@ -135,6 +144,23 @@ export default class GameOfLife{
         c.addEventListener('mouseup',(e)=>{
             this.mouseDown = false;
         });
+
+        c.addEventListener('mouseout',(e)=>{
+            this.currentNode = null;
+        })
+        c.addEventListener('click',(e)=>{
+            if(!this.editMode.checked || this.editType !== "pattern") return;
+            this.currentNode = this.getCurrentIJ(e);
+            if(this.currentNode === null) return;
+
+            this.patternIJ = this.getPatternIJ();
+
+            for(let i=0;i<this.patternIJ.length;i++){
+                const {i: pi, j: pj} = this.patternIJ[i];
+                if(pi < 0 || pj < 0 || pi >= this.rows || pj >= this.cols) continue;
+                this.grid[pi][pj].alive = true;
+            }
+        })
     }
 
     deactivateAllButtons(){
@@ -168,6 +194,8 @@ export default class GameOfLife{
     }
 
     setControls(){
+        this.mirror = document.querySelector("#mirror");
+        this.patternType = document.querySelector('.pattern-type');
         this.editType = "move-around";
         this.editMode = document.querySelector('#edit-mode');
         this.editMode.onchange = this.editModeChanged;
@@ -212,13 +240,67 @@ export default class GameOfLife{
         }
     }
 
+
+    swap(arr,x,y){
+        const temp = arr[x];
+        arr[x] = arr[y];
+        arr[y] = temp;
+    }
+    mirrorPattern(pattern){
+        const newPattern = [];
+        for(let i=0;i<pattern.length;i++){
+            const row = pattern[i];
+            const temp = [];
+            for(let k=row.length-1;k>=0;k--){
+                temp.push(row[k]);
+            }
+            newPattern.push(temp);
+        }
+        return newPattern;
+    }
+
+    getPatternIJ(){
+        let pattern = patterns[this.patternType.value];
+
+        if(this.mirror.checked){
+            pattern = this.mirrorPattern(pattern);
+        }
+
+        const mi = Math.floor(pattern.length/2);
+        const mj = Math.floor(pattern[0].length/2);
+        const patternIJ = [];
+        for(let i=0;i<pattern.length;i++){
+            for(let j=0;j<pattern[i].length;j++){
+                if(pattern[i][j] === 0) continue;
+                const ij = {
+                    i: this.currentNode.i + i - mi,
+                    j: this.currentNode.j + j - mj,
+                }
+                patternIJ.push(ij);
+            }
+        }
+        return patternIJ;
+    }
+
     draw(){
         this.halfWidth = this.width/2;
         this.halfHeight = this.height/2;
         this.gridWidth = this.width * this.cols;
         this.gridHeight = this.height * this.rows;
         this.drawCells();
+        this.drawPattern();
         this.drawGrid();
+    }
+
+    drawPattern(){
+        if(!this.editMode.checked || this.editType !== "pattern" || this.currentNode === null) return;
+
+        const patternIJ = this.getPatternIJ();
+        
+        for(let i=0;i<patternIJ.length;i++){
+            const rect = getRectangle(this.width * patternIJ[i].j + this.halfWidth, this.height * patternIJ[i].i + this.halfHeight, this.width, this.height)
+            this.transforms.drawShape(rect, "red", true);
+        }
     }
 
     drawCells(){
@@ -226,10 +308,8 @@ export default class GameOfLife{
             for(let j=0;j<this.cols;j++){
                 if(!this.grid[i][j].alive)
                     continue;
-                
                 const rect = getRectangle(this.width * j + this.halfWidth, this.height * i + this.halfHeight, this.width, this.height);
-                this.transforms.drawShape(rect, "black", true); 
-                
+                this.transforms.drawShape(rect, "black", true);                 
             }
         }
     }

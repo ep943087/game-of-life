@@ -12,7 +12,7 @@ class Cell{
         return this.alive? "black" : "white";
     }
 
-    setNeighbors(grid){
+    setNeighbors(grid, wrapAround){
         this.neighbors = [];
         for(let i=-1;i<=1;i++){
             for(let j=-1;j<=1;j++){
@@ -21,14 +21,15 @@ class Cell{
                 let ci = this.i + i;
                 let cj = this.j + j;
 
-                if(ci < 0 || cj < 0 || ci >= grid.length || cj >= grid[0].length)
+                if (!wrapAround && (ci < 0 || cj < 0 || ci >= grid.length || cj >= grid[0].length))
                     continue;
                 
-                // This allows wrap-around grid neighbors
-                // ci = ci < 0? grid.length - 1 : ci;
-                // cj = cj < 0? grid[0].length - 1 : cj;
-                // ci = ci >= grid.length? 0 : ci;
-                // cj = cj >= grid[0].length? 0 : cj;
+                if (wrapAround) {
+                    ci = ci < 0 ? grid.length - 1 : ci;
+                    cj = cj < 0 ? grid[0].length - 1 : cj;
+                    ci = ci >= grid.length? 0 : ci;
+                    cj = cj >= grid[0].length? 0 : cj;
+                }
 
                 this.neighbors.push(grid[ci][cj]);
             }
@@ -70,7 +71,6 @@ export default class GameOfLife{
         this.rows = rows;
         this.cols = cols;
         this.gridColor = "gray";
-        this.wrapAround = true;
         this.initGrid();        
         this.transforms = new Transformations(c);
         this.width = 25;
@@ -81,6 +81,7 @@ export default class GameOfLife{
         this.setControls();
         this.currentCell = null;        
         this.mouse(c);
+        this.handleWrapAroundChange(); 
         this.clearNodesButton();
         this.currentNode = null;
     }
@@ -154,13 +155,24 @@ export default class GameOfLife{
             if(this.currentNode === null) return;
 
             this.patternIJ = this.getPatternIJ();
+            const wrapAround = this.wrapAround.checked;
 
             for(let i=0;i<this.patternIJ.length;i++){
-                const {i: pi, j: pj} = this.patternIJ[i];
+                let {i: pi, j: pj} = this.patternIJ[i];
+                if (wrapAround) {
+                    pi = this.convertWrapAroundI(pi);
+                    pj = this.convertWrapAroundJ(pj);
+                }
                 if(pi < 0 || pj < 0 || pi >= this.rows || pj >= this.cols) continue;
                 this.grid[pi][pj].alive = true;
             }
         })
+    }
+
+    handleWrapAroundChange() {
+        this.wrapAround.addEventListener('change', () => {
+            this.setGridNeighbors();
+        });
     }
 
     deactivateAllButtons(){
@@ -198,10 +210,19 @@ export default class GameOfLife{
         this.patternType = document.querySelector('.pattern-type');
         this.editType = "move-around";
         this.editMode = document.querySelector('#edit-mode');
+        this.wrapAround = document.querySelector('#wrap-around');
         this.editMode.onchange = this.editModeChanged;
         this.buttonsClicked();
     }
 
+
+    setGridNeighbors() {
+        for(let i=0;i<this.rows;i++){
+            for(let j=0;j<this.cols;j++){
+                this.grid[i][j].setNeighbors(this.grid, this.wrapAround?.checked);
+            }
+        }  
+    }
 
     initGrid(){
         this.grid = [];
@@ -213,11 +234,7 @@ export default class GameOfLife{
             this.grid.push(row);
         }
 
-        for(let i=0;i<this.rows;i++){
-            for(let j=0;j<this.cols;j++){
-                this.grid[i][j].setNeighbors(this.grid);
-            }
-        }
+        this.setGridNeighbors();
     }
 
     update(){
@@ -280,6 +297,24 @@ export default class GameOfLife{
             }
         }
         return patternIJ;
+    }
+
+    convertWrapAroundI(i) {
+        if (i < 0) {
+            return this.rows + i;
+        } else if (i >= this.rows) {
+            return i - this.rows;
+        }
+        return i;
+    }
+
+    convertWrapAroundJ(j) {
+        if (j < 0) {
+            return this.cols + j;
+        } else if (j >= this.cols) {
+            return j - this.cols;
+        }
+        return j;
     }
 
     draw(){
